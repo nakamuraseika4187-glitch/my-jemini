@@ -1,27 +1,28 @@
+import sys
+import io
+
+# 日本語エラーを無理やり黙らせるおまじない
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 import streamlit as st
 from google import genai
-import os
 
-# --- 設定 ---
-st.title("🍎 Mac版 Gemini 2.5")
-st.caption("まずはこの画面が正常に動くか確認しましょう。")
+st.title("🍎 再起動テスト")
 
-# APIキーの設定（Streamlit CloudのSecretsから読み込み）
-# ここでエラーが出る場合は、Secretsの設定を確認してください
 try:
-    MY_API_KEY = st.secrets["GEMINI_API_KEY"]
-    client = genai.Client(api_key=MY_API_KEY)
+    # 念のため、キーから余計な空白を削除する処理を追加
+    raw_key = st.secrets["GEMINI_API_KEY"]
+    clean_key = raw_key.strip().replace("　", "") # 全角スペースも削除
+    client = genai.Client(api_key=clean_key)
 except Exception as e:
-    st.error("APIキー（Secrets）が正しく設定されていません。")
+    st.error("設定画面のAPIキーを確認してください")
     st.stop()
 
-# チャット入力欄
-if prompt := st.chat_input("何か話しかけてください"):
-    # ユーザーの入力を表示
+if prompt := st.chat_input("テスト送信"):
     with st.chat_message("user"):
         st.write(prompt)
-
-    # AIの返答を表示
+    
     with st.chat_message("assistant"):
         response = client.models.generate_content(
             model="gemini-2.0-flash",
