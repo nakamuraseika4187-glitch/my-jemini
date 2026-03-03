@@ -1,31 +1,33 @@
-import sys
-import io
-
-# 日本語エラーを無理やり黙らせるおまじない
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-
 import streamlit as st
 from google import genai
+import os
 
-st.title("🍎 再起動テスト")
+st.title("🚀 復旧テストモード")
 
-try:
-    # 念のため、キーから余計な空白を削除する処理を追加
-    raw_key = st.secrets["GEMINI_API_KEY"]
-    clean_key = raw_key.strip().replace("　", "") # 全角スペースも削除
-    client = genai.Client(api_key=clean_key)
-except Exception as e:
-    st.error("設定画面のAPIキーを確認してください")
+# 1. 鍵のチェック
+if "GEMINI_API_KEY" not in st.secrets:
+    st.error("Secretsに 'GEMINI_API_KEY' が見つかりません。")
     st.stop()
 
-if prompt := st.chat_input("テスト送信"):
-    with st.chat_message("user"):
-        st.write(prompt)
+# 2. 接続の準備
+try:
+    api_key = st.secrets["GEMINI_API_KEY"].strip()
+    client = genai.Client(api_key=api_key)
     
-    with st.chat_message("assistant"):
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt
-        )
-        st.write(response.text)
+    # 3. チャット
+    if prompt := st.chat_input("テストメッセージを送ってください"):
+        with st.chat_message("user"):
+            st.write(prompt)
+            
+        with st.chat_message("assistant"):
+            # ここでモデル名を「安定版」に固定してテストします
+            response = client.models.generate_content(
+                model="gemini-1.5-flash", 
+                contents=prompt
+            )
+            st.write(response.text)
+
+except Exception as e:
+    # 詳しいエラー内容を画面に出すようにしました
+    st.error("エラーが発生しました。内容を確認してください。")
+    st.code(str(e)) # これでエラーの正体がわかります
