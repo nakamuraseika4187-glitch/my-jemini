@@ -1,33 +1,30 @@
 import streamlit as st
 from google import genai
-import os
 
-st.title("🚀 復旧テストモード")
+st.title("🚀 最終接続テスト")
 
-# 1. 鍵のチェック
+# Secretsのチェック
 if "GEMINI_API_KEY" not in st.secrets:
-    st.error("Secretsに 'GEMINI_API_KEY' が見つかりません。")
+    st.error("Secretsに 'GEMINI_API_KEY' が設定されていません。")
     st.stop()
 
-# 2. 接続の準備
 try:
-    api_key = st.secrets["GEMINI_API_KEY"].strip()
+    # 接続準備
+    api_key = st.secrets["GEMINI_API_KEY"].strip().replace('"', '') # 引用符を掃除
     client = genai.Client(api_key=api_key)
     
-    # 3. チャット
-    if prompt := st.chat_input("テストメッセージを送ってください"):
+    if prompt := st.chat_input("何か入力してください"):
         with st.chat_message("user"):
             st.write(prompt)
             
         with st.chat_message("assistant"):
-            # ここでモデル名を「安定版」に固定してテストします
+            # 【ここを修正】モデル名から 'models/' を外して指定します
             response = client.models.generate_content(
-                model="gemini-1.5-flash", 
+                model="gemini-2.0-flash", 
                 contents=prompt
             )
             st.write(response.text)
 
 except Exception as e:
-    # 詳しいエラー内容を画面に出すようにしました
-    st.error("エラーが発生しました。内容を確認してください。")
-    st.code(str(e)) # これでエラーの正体がわかります
+    st.error("エラーが発生しました。")
+    st.code(str(e))
