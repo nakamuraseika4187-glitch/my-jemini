@@ -20,16 +20,20 @@ with st.sidebar:
     uploaded_file = st.file_uploader("写真をアップロード", type=['png', 'jpg', 'jpeg'])
     
     if uploaded_file:
+        # 表示用の画像
         image = Image.open(uploaded_file)
         st.image(image, caption='現在の伝票', use_container_width=True)
         
         if st.button("この伝票を解析して会話を始める"):
             with st.spinner("解析中..."):
-                # 画像を再度開いて確実に渡す
-                img_for_ai = Image.open(uploaded_file)
+                # エラー回避：画像をバイトデータとして読み込む
+                img_bytes = uploaded_file.getvalue()
                 response = client.models.generate_content(
                     model="gemini-2.0-flash",
-                    contents=["この伝票を詳細に文字起こしして整理してください。", img_for_ai]
+                    contents=[
+                        "この伝票を詳細に文字起こしして整理してください。日本語で回答してください。",
+                        {"mime_type": "image/jpeg", "data": img_bytes}
+                    ]
                 )
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
 
@@ -44,17 +48,19 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-if prompt := st.chat_input("質問してください"):
+if prompt := st.chat_input("質問してください（例：合計金額は？）"):
     with st.chat_message("user"):
         st.write(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("assistant"):
         with st.spinner("考え中..."):
-            # 通信エラーを避けるため、コンテンツを整理
+            # 入力内容の準備
             input_content = [prompt]
             if uploaded_file:
-                input_content.append(Image.open(uploaded_file))
+                # エラー回避：チャット時も画像をバイトデータで渡す
+                img_bytes = uploaded_file.getvalue()
+                input_content.append({"mime_type": "image/jpeg", "data": img_bytes})
             
             try:
                 response = client.models.generate_content(
@@ -64,4 +70,5 @@ if prompt := st.chat_input("質問してください"):
                 st.write(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
-                st.error(f"エラーが発生しました。もう一度入力してみてください。: {e}")
+                st.error("通信エラーが発生しました。もう一度短めの文章で試してみてください。")
+                st.info(f"詳細エラー: {e}")
